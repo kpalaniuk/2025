@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { AlbumLightbox } from './components/AlbumLightbox';
+import { CloudinaryImage } from './components/CloudinaryImage';
 import { 
   Sparkles, 
   Sun, 
@@ -270,6 +271,9 @@ function PhotoTile({
 }) {
   const isLarge = adventure.gridClass?.includes('col-span-2');
   
+  // Use larger image for feature tiles, smaller for regular tiles
+  const imageWidth = isLarge ? 800 : 500;
+  
   return (
     <motion.button
       onClick={onClick}
@@ -285,12 +289,17 @@ function PhotoTile({
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
     >
-      {/* Background Image with lazy loading */}
-      <img
+      {/* Background Image with Cloudinary optimization */}
+      <CloudinaryImage
         src={adventure.featureImage}
         alt={adventure.title}
-        loading="lazy"
-        decoding="async"
+        width={imageWidth}
+        crop="fill"
+        gravity="auto"
+        quality="auto"
+        loading={index < 4 ? 'eager' : 'lazy'}
+        priority={index < 2}
+        sizes={isLarge ? '(max-width: 768px) 100vw, 66vw' : '(max-width: 768px) 50vw, 33vw'}
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
       />
       

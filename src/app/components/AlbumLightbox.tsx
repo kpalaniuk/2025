@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { getOptimizedImageUrl } from './CloudinaryImage';
 
 interface AlbumLightboxProps {
   images: string[];
@@ -8,6 +9,51 @@ interface AlbumLightboxProps {
   onClose: () => void;
   initialIndex?: number;
   albumTitle?: string;
+}
+
+// Image size configurations
+const LIGHTBOX_IMAGE_WIDTH = 1400; // Main lightbox image
+const THUMBNAIL_WIDTH = 120; // Thumbnail strip
+
+// Thumbnail with fallback for when Cloudinary image fails
+function ThumbnailButton({ 
+  image, 
+  index, 
+  isActive, 
+  onClick 
+}: { 
+  image: string; 
+  index: number; 
+  isActive: boolean; 
+  onClick: () => void;
+}) {
+  const [useFallback, setUseFallback] = useState(false);
+  
+  return (
+    <button
+      onClick={onClick}
+      className={`flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden transition-all ${
+        isActive 
+          ? 'ring-2 ring-amber-400 opacity-100' 
+          : 'opacity-50 hover:opacity-80'
+      }`}
+    >
+      <img
+        src={useFallback 
+          ? image 
+          : getOptimizedImageUrl(image, { 
+              width: THUMBNAIL_WIDTH, 
+              crop: 'fill',
+              quality: 'auto:eco'
+            })
+        }
+        alt={`Thumbnail ${index + 1}`}
+        className="w-full h-full object-cover"
+        loading="lazy"
+        onError={() => !useFallback && setUseFallback(true)}
+      />
+    </button>
+  );
 }
 
 export function AlbumLightbox({ 
@@ -19,24 +65,59 @@ export function AlbumLightbox({
 }: AlbumLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [useLocalFallback, setUseLocalFallback] = useState(false);
+  const preloadedImages = useRef<Set<string>>(new Set());
+  const failedImages = useRef<Set<string>>(new Set()); // Track which images failed from Cloudinary
+
+  // Preload adjacent images for smooth navigation
+  const preloadAdjacentImages = useCallback((index: number) => {
+    const indicesToPreload = [
+      index - 1,
+      index + 1,
+      index + 2, // Preload one more ahead
+    ].filter(i => i >= 0 && i < images.length);
+
+    indicesToPreload.forEach(i => {
+      const src = images[i];
+      if (!preloadedImages.current.has(src)) {
+        preloadedImages.current.add(src);
+        const img = new Image();
+        img.src = getOptimizedImageUrl(src, { width: LIGHTBOX_IMAGE_WIDTH, crop: 'fit' });
+      }
+    });
+  }, [images]);
 
   // Reset to initial index when opening
   useEffect(() => {
     if (isOpen) {
       setCurrentIndex(initialIndex);
       setImageLoaded(false);
+      setUseLocalFallback(failedImages.current.has(images[initialIndex]));
+      preloadedImages.current.clear();
+      // Preload adjacent images
+      preloadAdjacentImages(initialIndex);
     }
-  }, [isOpen, initialIndex]);
+  }, [isOpen, initialIndex, preloadAdjacentImages, images]);
 
   const goToPrevious = useCallback(() => {
     setImageLoaded(false);
-    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-  }, [images.length]);
+    setCurrentIndex((prev) => {
+      const newIndex = prev === 0 ? images.length - 1 : prev - 1;
+      setUseLocalFallback(failedImages.current.has(images[newIndex]));
+      preloadAdjacentImages(newIndex);
+      return newIndex;
+    });
+  }, [images, preloadAdjacentImages]);
 
   const goToNext = useCallback(() => {
     setImageLoaded(false);
-    setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
-  }, [images.length]);
+    setCurrentIndex((prev) => {
+      const newIndex = prev === images.length - 1 ? 0 : prev + 1;
+      setUseLocalFallback(failedImages.current.has(images[newIndex]));
+      preloadAdjacentImages(newIndex);
+      return newIndex;
+    });
+  }, [images, preloadAdjacentImages]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -137,10 +218,24 @@ export function AlbumLightbox({
                   </div>
                 )}
                 <img
-                  src={images[currentIndex]}
+                  src={useLocalFallback 
+                    ? images[currentIndex] 
+                    : getOptimizedImageUrl(images[currentIndex], { 
+                        width: LIGHTBOX_IMAGE_WIDTH, 
+                        crop: 'fit',
+                        quality: 'auto:good'
+                      })
+                  }
                   alt={`Photo ${currentIndex + 1}`}
                   className="max-h-[80vh] max-w-full object-contain rounded-lg shadow-2xl"
                   onLoad={() => setImageLoaded(true)}
+                  onError={() => {
+                    // If Cloudinary fails, fall back to local image
+                    if (!useLocalFallback) {
+                      failedImages.current.add(images[currentIndex]);
+                      setUseLocalFallback(true);
+                    }
+                  }}
                   draggable={false}
                 />
               </motion.div>
@@ -159,25 +254,18 @@ export function AlbumLightbox({
             <div className="mt-4 w-full max-w-5xl overflow-x-auto">
               <div className="flex gap-2 justify-center pb-2">
                 {images.map((image, index) => (
-                  <button
+                  <ThumbnailButton
                     key={index}
+                    image={image}
+                    index={index}
+                    isActive={index === currentIndex}
                     onClick={() => {
                       setImageLoaded(false);
+                      setUseLocalFallback(failedImages.current.has(images[index]));
                       setCurrentIndex(index);
+                      preloadAdjacentImages(index);
                     }}
-                    className={`flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden transition-all ${
-                      index === currentIndex 
-                        ? 'ring-2 ring-amber-400 opacity-100' 
-                        : 'opacity-50 hover:opacity-80'
-                    }`}
-                  >
-                    <img
-                      src={image}
-                      alt={`Thumbnail ${index + 1}`}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  </button>
+                  />
                 ))}
               </div>
             </div>
