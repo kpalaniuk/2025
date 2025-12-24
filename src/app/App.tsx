@@ -133,7 +133,7 @@ export default function App() {
             transition={{ duration: 0.8 }}
           >
             <motion.h1
-              className="my-16 text-white text-[clamp(4.5rem,12vw,12rem)] leading-[0.9] tracking-normal font-light drop-shadow-2xl"
+              className="my-16 text-white text-[clamp(3.5rem,9vw,9rem)] leading-[0.9] tracking-normal font-light drop-shadow-2xl"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
