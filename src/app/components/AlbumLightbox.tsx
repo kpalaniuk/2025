@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useMotionValue, PanInfo } from 'motion/react';
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { getOptimizedImageUrl } from './CloudinaryImage';
@@ -68,6 +68,10 @@ export function AlbumLightbox({
   const [useLocalFallback, setUseLocalFallback] = useState(false);
   const preloadedImages = useRef<Set<string>>(new Set());
   const failedImages = useRef<Set<string>>(new Set()); // Track which images failed from Cloudinary
+  
+  // Swipe gesture support
+  const dragX = useMotionValue(0);
+  const swipeThreshold = 50; // Minimum px to trigger navigation
 
   // Preload adjacent images for smooth navigation
   const preloadAdjacentImages = useCallback((index: number) => {
@@ -118,6 +122,19 @@ export function AlbumLightbox({
       return newIndex;
     });
   }, [images, preloadAdjacentImages]);
+
+  // Handle swipe gesture
+  const handleDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const offset = info.offset.x;
+    const velocity = info.velocity.x;
+    
+    // Navigate if swipe was fast enough or far enough
+    if (offset < -swipeThreshold || velocity < -500) {
+      goToNext();
+    } else if (offset > swipeThreshold || velocity > 500) {
+      goToPrevious();
+    }
+  }, [goToNext, goToPrevious]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -171,11 +188,11 @@ export function AlbumLightbox({
 
           {/* Content */}
           <div 
-            className="relative z-10 flex flex-col items-center w-full h-full p-4 md:p-8"
+            className="relative z-10 flex flex-col items-center w-full h-full p-4 pb-6 md:p-8 md:pb-8"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between w-full max-w-5xl mb-4">
+            <div className="flex-shrink-0 flex items-center justify-between w-full max-w-5xl mb-4">
               <div className="flex items-center gap-4">
                 {albumTitle && (
                   <h2 className="text-white text-xl font-light">{albumTitle}</h2>
@@ -194,7 +211,7 @@ export function AlbumLightbox({
             </div>
 
             {/* Image container */}
-            <div className="relative flex-1 w-full max-w-5xl flex items-center justify-center">
+            <div className="relative flex-1 w-full max-w-5xl flex items-center justify-center min-h-0">
               {/* Previous button */}
               <button
                 onClick={goToPrevious}
@@ -204,13 +221,18 @@ export function AlbumLightbox({
                 <ChevronLeft className="size-6 md:size-8 text-white" />
               </button>
 
-              {/* Image */}
+              {/* Image - with swipe support on mobile */}
               <motion.div
                 key={currentIndex}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: imageLoaded ? 1 : 0, scale: 1 }}
                 transition={{ duration: 0.3 }}
-                className="relative max-h-full max-w-full flex items-center justify-center"
+                className="relative max-h-full max-w-full flex items-center justify-center touch-pan-y"
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.2}
+                onDragEnd={handleDragEnd}
+                style={{ x: dragX }}
               >
                 {!imageLoaded && (
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -227,7 +249,7 @@ export function AlbumLightbox({
                       })
                   }
                   alt={`Photo ${currentIndex + 1}`}
-                  className="max-h-[80vh] max-w-full object-contain rounded-lg shadow-2xl"
+                  className="max-h-full max-w-full object-contain rounded-lg shadow-2xl select-none"
                   onLoad={() => setImageLoaded(true)}
                   onError={() => {
                     // If Cloudinary fails, fall back to local image
@@ -251,7 +273,7 @@ export function AlbumLightbox({
             </div>
 
             {/* Thumbnail strip */}
-            <div className="mt-4 w-full max-w-5xl overflow-x-auto">
+            <div className="flex-shrink-0 mt-4 w-full max-w-5xl overflow-x-auto">
               <div className="flex gap-2 justify-center pb-2">
                 {images.map((image, index) => (
                   <ThumbnailButton

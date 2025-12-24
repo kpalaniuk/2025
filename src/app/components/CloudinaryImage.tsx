@@ -14,6 +14,7 @@ interface CloudinaryImageProps {
   crop?: 'fill' | 'fit' | 'scale' | 'thumb' | 'limit';
   gravity?: 'auto' | 'face' | 'center';
   quality?: 'auto' | 'auto:low' | 'auto:eco' | 'auto:good' | 'auto:best' | number;
+  blurPlaceholder?: boolean;
 }
 
 export function CloudinaryImage({
@@ -29,6 +30,7 @@ export function CloudinaryImage({
   crop = 'fill',
   gravity = 'auto',
   quality = 'auto',
+  blurPlaceholder = true,
 }: CloudinaryImageProps) {
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -72,21 +74,38 @@ export function CloudinaryImage({
     quality,
   });
 
+  // Tiny blur placeholder (20px wide, heavily compressed)
+  const blurSrc = blurPlaceholder ? getCloudinaryUrl(src, {
+    width: 20,
+    crop,
+    gravity,
+    quality: 'auto:low',
+  }) : undefined;
+
   return (
-    <img
-      src={optimizedSrc}
-      srcSet={srcSet}
-      sizes={sizes}
-      alt={alt}
-      className={className}
-      loading={priority ? 'eager' : loading}
-      decoding="async"
-      onLoad={() => {
-        setIsLoaded(true);
-        onLoad?.();
-      }}
-      onError={() => setHasError(true)}
-    />
+    <div className="relative overflow-hidden" style={{ display: 'contents' }}>
+      <img
+        src={optimizedSrc}
+        srcSet={srcSet}
+        sizes={sizes}
+        alt={alt}
+        className={`${className} transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+        loading={priority ? 'eager' : loading}
+        decoding="async"
+        // @ts-expect-error fetchpriority is valid but not in React types yet
+        fetchpriority={priority ? 'high' : undefined}
+        onLoad={() => {
+          setIsLoaded(true);
+          onLoad?.();
+        }}
+        onError={() => setHasError(true)}
+        style={blurPlaceholder && !isLoaded && blurSrc ? {
+          backgroundImage: `url(${blurSrc})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        } : undefined}
+      />
+    </div>
   );
 }
 
