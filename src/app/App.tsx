@@ -104,7 +104,7 @@ export default function App() {
   
   // Hero content fades and moves up as you scroll past
   const heroContentY = useTransform(scrollYProgress, [0, 1], [0, -50]);
-  const heroContentOpacity = useTransform(scrollYProgress, [0, 0.4, 0.8], [1, 1, 0]);
+  const heroContentOpacity = useTransform(scrollYProgress, [0, 0.6, 0.95], [1, 1, 0]);
   const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.98]);
 
   return (
