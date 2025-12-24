@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { motion } from 'motion/react';
+import { useState, useRef } from 'react';
+import { motion, useScroll, useTransform } from 'motion/react';
 import { AlbumLightbox } from './components/AlbumLightbox';
 import { CloudinaryImage } from './components/CloudinaryImage';
 import { useAdventures, type AdventureWithImages } from './hooks/useAdventures';
@@ -91,38 +91,61 @@ function PhotoTile({
 export default function App() {
   const { adventures } = useAdventures();
   const [selectedAlbum, setSelectedAlbum] = useState<AdventureWithImages | null>(null);
+  
+  // Container ref for scroll tracking
+  const containerRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
+  
+  // Track scroll progress through the hero section
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"]
+  });
+  
+  // Hero content fades and moves up as you scroll past
+  const heroContentY = useTransform(scrollYProgress, [0, 1], [0, -50]);
+  const heroContentOpacity = useTransform(scrollYProgress, [0, 0.4, 0.8], [1, 1, 0]);
+  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.98]);
 
   return (
-    <div className="min-h-screen bg-stone-950">
-      {/* Hero Section */}
-      <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-20">
-        {/* Background Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${heroImage})` }}
+    <div ref={containerRef} className="relative min-h-screen">
+      {/* Fixed Hero Background - stays in place as content scrolls over */}
+      <div 
+        className="fixed inset-0 bg-cover"
+        style={{ backgroundImage: `url(${heroImage})`, backgroundPosition: 'center 40%' }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/60" />
+      </div>
+      
+      {/* Hero Section - content that fades/moves as you scroll */}
+      <section ref={heroRef} className="relative z-10 min-h-screen flex items-center justify-center">
+        <motion.div 
+          className="px-6 py-20 text-center max-w-5xl"
+          style={{ 
+            y: heroContentY, 
+            opacity: heroContentOpacity,
+            scale: heroScale 
+          }}
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
-        </div>
-
-        <div className="relative z-10 max-w-5xl text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
             <motion.h1
-              className="mb-16 text-white text-[clamp(3rem,8vw,8rem)] leading-[0.9] tracking-tight font-bold"
+              className="my-16 text-white text-[clamp(4.5rem,12vw,12rem)] leading-[0.9] tracking-normal font-light drop-shadow-2xl"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
             >
-              2025 Palaniuk
+              <span className="font-bold">2025</span> Palaniuk
               <br />
               Year in Review
             </motion.h1>
 
             <motion.h2
-              className="mb-8 text-white/90 text-[clamp(1.5rem,3vw,2.5rem)] tracking-wide font-light"
+              className="mb-[40vh] text-white/90 text-[clamp(1.5rem,3vw,2.5rem)] tracking-wide font-light drop-shadow-lg"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
@@ -130,8 +153,23 @@ export default function App() {
               A year of gratitude and Growth
             </motion.h2>
 
+            {/* Scroll indicator */}
+            <motion.div
+              className="mb-8 flex justify-center"
+              animate={{ y: [0, 10, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <div className="h-12 w-6 rounded-full border-2 border-white/40">
+                <motion.div
+                  className="mx-auto mt-2 h-2 w-2 rounded-full bg-white/60"
+                  animate={{ y: [0, 20, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
+              </div>
+            </motion.div>
+
             <motion.p
-              className="mx-auto mb-12 max-w-2xl text-white/80 text-lg"
+              className="mx-auto mb-12 max-w-2xl text-white/80 text-lg font-extralight drop-shadow-md"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.7 }}
@@ -154,30 +192,20 @@ export default function App() {
               </button>
             </motion.div>
           </motion.div>
-        </div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          className="absolute bottom-8"
-          animate={{ y: [0, 10, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          <div className="h-12 w-6 rounded-full border-2 border-white/40">
-            <motion.div
-              className="mx-auto mt-2 h-2 w-2 rounded-full bg-white/60"
-              animate={{ y: [0, 20, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
-          </div>
         </motion.div>
+
       </section>
 
-      {/* Family Letter Section - NOW ABOVE PHOTOS */}
-      <section id="family-letter" className="px-6 py-32 bg-stone-900">
+      {/* Gradient Transition Zone - smoothly covers the fixed background */}
+      <div className="relative z-20 h-48 bg-gradient-to-b from-transparent via-stone-950/70 to-stone-900" />
+
+      {/* Family Letter Section */}
+      <section id="family-letter" className="relative z-20 px-6 py-32 bg-stone-900">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 60 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
           className="mx-auto max-w-3xl"
         >
           <div className="relative">
@@ -191,47 +219,84 @@ export default function App() {
               </h2>
               
               <div className="space-y-6 text-stone-300 text-lg leading-relaxed font-light">
-                <p>
-                  What a year it's been for the Palaniuk family! <strong className="font-medium text-white">Bohdi</strong> and <strong className="font-medium text-white">Meta</strong> have been absolutely thriving—excelling in school, learning piano, and truly mastering the art of being good friends. They've kept us on our toes with soccer, gymnastics and jiu jitsu practices, endless creativity at home drawing and painting, and adventures near and far.
-                </p>
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                >
+                  What a year it's been for the Palaniuk family! <strong className="font-medium text-white">Bohdi</strong> and <strong className="font-medium text-white">Meta</strong> have been absolutely thriving—excelling in school, learning piano, and truly mastering the art of being good friends (and most of the time siblings too). They've kept our schedules busy with soccer, gymnastics and jiu jitsu practices, endless creativity at home drawing and painting, and adventures near and far. What we're most proud of them for is both earning "Panther Pride awards" this year exemplifying their ability to show strong character in line with the core principles of their International Baccalaureate program at school.
+                </motion.p>
 
-                <p>
-                  <strong className="font-medium text-white">Paige</strong> had a monumental year, with her interior design business flourishing beyond our wildest dreams. She took on over 15 new projects, and crushed them all, transforming spaces and bringing beauty into so many homes. We couldn't be prouder of her dedication and creativity.
-                </p>
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+                >
+                  <strong className="font-medium text-white">Paige</strong> had a monumental year, with her interior design business flourishing beyond our wildest dreams. She took on over 15 new projects, and crushed them all, transforming spaces and bringing beauty into so many homes. We couldn't be prouder of her dedication and creativity. It's safe to say that in 2026 her focus is going to be learning how to step on the brakes instead of the gas!
+                </motion.p>
 
-                <p>
-                  <strong className="font-medium text-white">Kyle</strong> turned 40 this year (though he insists he's still 25 at heart!). He's been coaching local club soccer, pouring energy into his bands with big shows throughout the year, and launching the Granada House Podcast with 9 episodes and counting. Mountain biking, music shows with his three bands, and cultivating love and community through his passion running Granada House have kept his spirit young and adventurous.
-                </p>
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+                >
+                  <strong className="font-medium text-white">Kyle</strong> turned 40, and rather than have a crisis about it, he doubled down on being equal parts artist, philosopher, and "guy who can't say no to a good idea." He's coaching soccer, gigging with three bands, mountain biking, hosting Granada House events, gatherings and podcasts, and still finding time to tune in to age-old philosophy and combine it with new theories on AI and quantum mechanics. He insists this is balance. His calendar may not agree.
+                </motion.p>
 
-                <p>
-                  As a family, we embarked on incredible journeys—exploring the magic of <strong className="font-medium text-white">Italy</strong>, sailing through the stunning <strong className="font-medium text-white">San Juan Islands</strong>, and creating countless memories together. Every adventure reminded us how blessed we are to experience the world side by side. Our newest adventure is taming two new kittens in our house, <strong className="font-medium text-white">Comet</strong> and <strong className="font-medium text-white">Queso</strong>.
-                </p>
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+                >
+                  As a family, we embarked on incredible journeys—exploring the magic of <strong className="font-medium text-white">Italy</strong>, sailing through the stunning <strong className="font-medium text-white">San Juan Islands</strong>, and creating countless memories together. We also took the kids to their first multiple day music festival (Joshua Tree Music Fest) and we found our gritty dirty bodies dancing straight for 3 days which will surely become a tradition. Every adventure reminded us how blessed we are to experience the world side by side. Our newest adventure is taming two new kittens in our house, <strong className="font-medium text-white">Comet</strong> and <strong className="font-medium text-white">Queso</strong>.
+                </motion.p>
 
-                <p className="text-stone-400 italic border-l-4 border-amber-500/50 pl-6 my-8">
+                <motion.p
+                  className="text-stone-400 italic border-l-4 border-amber-500/50 pl-6 my-8"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+                >
                   This year, we also said goodbye to our beloved <strong className="font-medium not-italic text-stone-300">Jasper</strong>. His unwavering patience, loyalty, and gentle spirit blessed our family in ways words could never capture. Though our hearts ache without him, we carry his love with us always. His light will never be forgotten.
-                </p>
+                </motion.p>
 
-                <p>
-                  Here's to a bud of a new year in 2026 filled with growth, adventure, love, and gratitude. We're so thankful for the journey and for all of you who've been part of our story.
-                </p>
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+                >
+                  Here's to a bud of a new year in 2026 filled with growth, adventure, love, and especially gratitude. We're so thankful for the journey and for all of you who've been part of our story.
+                </motion.p>
 
-                <div className="pt-8 text-center">
+                <motion.div
+                  className="pt-8 text-center"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
+                >
                   <p className="text-white font-medium text-xl mb-2">With all our love,</p>
                   <p className="text-stone-300 text-xl">
-                    Kyle, Paige, Bohdi, and Meta 💛
+                    Kyle, Paige, Bohdi, and Meta 💛 <span className="text-stone-400">(and Comet and Queso</span> 🐾<span className="text-stone-400">)</span>
                   </p>
-                  <p className="text-stone-400 text-lg mt-1">
-                    (and Comet and Queso 🐾)
-                  </p>
-                </div>
+                </motion.div>
               </div>
             </div>
           </div>
         </motion.div>
       </section>
+      
+      {/* Gradient transition into photo section */}
+      <div className="relative z-20 h-32 bg-gradient-to-b from-stone-900 to-stone-950" />
 
       {/* Year in Review Section - Photo Grid */}
-      <section id="year-review" className="px-4 md:px-8 py-24 bg-stone-950">
+      <section id="year-review" className="relative z-20 px-4 md:px-8 py-24 bg-stone-950">
         <div className="mx-auto max-w-7xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -263,7 +328,7 @@ export default function App() {
       </section>
 
       {/* Closing Message */}
-      <section className="px-6 py-32 bg-stone-900">
+      <section className="relative z-20 px-6 py-32 bg-stone-900">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -280,7 +345,7 @@ export default function App() {
       </section>
 
       {/* Stay Connected Section */}
-      <section className="px-6 py-32 bg-stone-950">
+      <section className="relative z-20 px-6 py-32 bg-stone-950">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -358,7 +423,7 @@ export default function App() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-stone-800 px-6 py-8 text-center bg-stone-950">
+      <footer className="relative z-20 border-t border-stone-800 px-6 py-8 text-center bg-stone-950">
         <p className="text-sm text-stone-500">
           With love, The Palaniuk Family • 2025 → 2026
         </p>

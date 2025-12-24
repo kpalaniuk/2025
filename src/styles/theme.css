@@ -24,8 +24,8 @@
   --input: transparent;
   --input-background: #f3f3f5;
   --switch-background: #cbced4;
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
+  --font-weight-heading: 300;
+  --font-weight-body: 200;
   --ring: oklch(0.708 0 0);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
@@ -63,8 +63,8 @@
   --border: oklch(0.269 0 0);
   --input: oklch(0.269 0 0);
   --ring: oklch(0.439 0 0);
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
+  --font-weight-heading: 300;
+  --font-weight-body: 200;
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -166,46 +166,46 @@
   h1 {
     font-family: var(--font-heading);
     font-size: var(--text-2xl);
-    font-weight: var(--font-weight-normal);
+    font-weight: var(--font-weight-heading);
     line-height: 1.5;
   }
 
   h2 {
     font-family: var(--font-heading);
     font-size: var(--text-xl);
-    font-weight: var(--font-weight-normal);
+    font-weight: var(--font-weight-heading);
     line-height: 1.5;
   }
 
   h3 {
     font-family: var(--font-heading);
     font-size: var(--text-lg);
-    font-weight: var(--font-weight-normal);
+    font-weight: var(--font-weight-heading);
     line-height: 1.5;
   }
 
   h4 {
     font-family: var(--font-heading);
     font-size: var(--text-base);
-    font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-heading);
     line-height: 1.5;
   }
 
   label {
     font-size: var(--text-base);
-    font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-body);
     line-height: 1.5;
   }
 
   button {
     font-size: var(--text-base);
-    font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-body);
     line-height: 1.5;
   }
 
   input {
     font-size: var(--text-base);
-    font-weight: var(--font-weight-normal);
+    font-weight: var(--font-weight-body);
     line-height: 1.5;
   }
 }
